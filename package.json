@@ -1,7 +1,9 @@
 {
-  "name": "nextjs",
-  "version": "0.1.0",
+  "name": "tiger-client",
+  "version": "1.0.0",
   "private": true,
+  "main": "client/dist/index.js",
+  "types": "client/dist/index.d.ts",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

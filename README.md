@@ -20,7 +20,7 @@ APP_KEYS=myapp:ps92:secret123,otherapp:g93:secret456
 Install the client:
 
 ```bash
-npm install https://gitpkg.now.sh/psdewar/tiger/client?main
+npm install github:psdewar/tiger
 ```
 
 Use it:
