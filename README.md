@@ -23,6 +23,12 @@ Install the client:
 npm install github:psdewar/tiger
 ```
 
+Set environment variable in your app:
+
+```
+TIGER_APP_KEY=your_app_secret
+```
+
 Use it:
 
 ```typescript
@@ -30,19 +36,29 @@ import { createTigerClient } from "tiger-client";
 
 const tiger = createTigerClient({
   appKey: process.env.TIGER_APP_KEY!,
-  baseUrl: "https://your-tiger.vercel.app", // optional if using default
 });
 
-// Create a checkout session
 const { url } = await tiger.checkout({
   mode: "payment",
   lineItems: [{ name: "Pro Plan", amountCents: 1999, quantity: 1 }],
-  successUrl: "https://myapp.com/thanks",
-  cancelUrl: "https://myapp.com/pricing",
+  successUrl: "https://yourapp.com/success",  // your app's URL
+  cancelUrl: "https://yourapp.com/cart",       // your app's URL
 });
 
 // Redirect user to `url`
 ```
+
+## Local development
+
+Just use production Tiger - no need to run it locally:
+
+```typescript
+const tiger = createTigerClient({
+  appKey: process.env.TIGER_APP_KEY!,
+});
+```
+
+To override (rare): pass `baseUrl` to point to a different Tiger instance.
 
 ## API
 
@@ -56,7 +72,7 @@ Create a Stripe checkout session.
   successUrl: string,
   cancelUrl: string,
   lineItems?: [{ name: string, amountCents: number, quantity?: number }],
-  priceId?: string,  // alternative to lineItems
+  priceId?: string,  // alternative to lineItems (for subscriptions)
   customerEmail?: string,
   metadata?: Record<string, string>,
   trialDays?: number,

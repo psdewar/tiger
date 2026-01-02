@@ -59,7 +59,7 @@ export interface TigerClient {
 }
 
 export function createTigerClient(config: TigerClientConfig): TigerClient {
-  const baseUrl = (config.baseUrl || "https://tiger.vercel.app").replace(/\/$/, "");
+  const baseUrl = (config.baseUrl || "https://tiger-three.vercel.app").replace(/\/$/, "");
   const headers = {
     "Content-Type": "application/json",
     Authorization: `Bearer ${config.appKey}`,

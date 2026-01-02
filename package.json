@@ -5,7 +5,7 @@
   "main": "client/dist/index.js",
   "types": "client/dist/index.d.ts",
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3100",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",

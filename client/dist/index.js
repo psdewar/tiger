@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createTigerClient = createTigerClient;
 function createTigerClient(config) {
-    const baseUrl = (config.baseUrl || "https://tiger.vercel.app").replace(/\/$/, "");
+    const baseUrl = (config.baseUrl || "https://tiger-three.vercel.app").replace(/\/$/, "");
     const headers = {
         "Content-Type": "application/json",
         Authorization: `Bearer ${config.appKey}`,
