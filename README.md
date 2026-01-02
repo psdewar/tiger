@@ -1,36 +1,78 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Tiger
 
-## Getting Started
+Stripe checkout proxy. Configure Stripe once, use it from any project.
 
-First, run the development server:
+## Setup
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+1. Deploy to Vercel
+2. Set environment variables:
+
+```
+STRIPE_SECRET_KEY_PS92=sk_test_xxx
+STRIPE_SECRET_KEY_G93=sk_test_xxx
+APP_KEYS=myapp:ps92:secret123,otherapp:g93:secret456
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+3. Generate app secrets with: `openssl rand -base64 32`
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Using from other projects
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Install the client:
 
-## Learn More
+```bash
+npm install https://gitpkg.now.sh/psdewar/tiger/client?main
+```
 
-To learn more about Next.js, take a look at the following resources:
+Use it:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```typescript
+import { createTigerClient } from "tiger-client";
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+const tiger = createTigerClient({
+  appKey: process.env.TIGER_APP_KEY!,
+  baseUrl: "https://your-tiger.vercel.app", // optional if using default
+});
 
-## Deploy on Vercel
+// Create a checkout session
+const { url } = await tiger.checkout({
+  mode: "payment",
+  lineItems: [{ name: "Pro Plan", amountCents: 1999, quantity: 1 }],
+  successUrl: "https://myapp.com/thanks",
+  cancelUrl: "https://myapp.com/pricing",
+});
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+// Redirect user to `url`
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## API
+
+### POST /api/checkout
+
+Create a Stripe checkout session.
+
+```typescript
+{
+  mode: "payment" | "subscription",
+  successUrl: string,
+  cancelUrl: string,
+  lineItems?: [{ name: string, amountCents: number, quantity?: number }],
+  priceId?: string,  // alternative to lineItems
+  customerEmail?: string,
+  metadata?: Record<string, string>,
+  trialDays?: number,
+  collectPhone?: boolean,
+  expiresInMinutes?: number,
+  shipping?: {
+    allowedCountries: string[],
+    options?: [{ displayName: string, amountCents: number }]
+  }
+}
+```
+
+### GET /api/session/:sessionId
+
+Get checkout session details.
+
+### GET /api/health
+
+Health check (no auth required).
