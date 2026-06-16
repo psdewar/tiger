@@ -34,7 +34,10 @@ export interface CreateCheckoutRequest {
   collectPhone?: boolean;
   /** "hosted" (default) redirects to Stripe; "embedded" stays on the consumer's page. */
   uiMode?: "hosted" | "embedded";
-  /** Required when uiMode is "embedded": where Stripe sends the buyer after completion. */
+  /**
+   * Optional for embedded checkout. With it, Stripe redirects here on completion;
+   * without it, embedded completes inline (redirect_on_completion: "never").
+   */
   returnUrl?: string;
 }
 

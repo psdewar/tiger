@@ -68,13 +68,10 @@ export async function POST(request: NextRequest) {
 
     const uiMode = body.uiMode || "hosted";
 
-    // Validate required fields
-    if (uiMode === "embedded") {
-      // Embedded checkout uses return_url instead of success/cancel URLs.
-      if (!body.returnUrl) {
-        return bad("returnUrl is required for embedded checkout");
-      }
-    } else if (!body.successUrl || !body.cancelUrl) {
+    // Validate required fields. Embedded needs neither success/cancel nor
+    // return_url: with a return_url it redirects on success, without one it
+    // completes inline (redirect_on_completion: "never").
+    if (uiMode !== "embedded" && (!body.successUrl || !body.cancelUrl)) {
       return bad("successUrl and cancelUrl are required");
     }
     if (!body.mode) {
@@ -110,9 +107,15 @@ export async function POST(request: NextRequest) {
     };
 
     if (uiMode === "embedded") {
-      // Stripe rejects success_url/cancel_url alongside embedded; use return_url instead.
+      // Stripe rejects success_url/cancel_url alongside embedded. With a
+      // return_url Stripe redirects on completion; without one it stays inline
+      // and the consumer handles completion via the onComplete callback.
       sessionParams.ui_mode = "embedded";
-      sessionParams.return_url = body.returnUrl;
+      if (body.returnUrl) {
+        sessionParams.return_url = body.returnUrl;
+      } else {
+        sessionParams.redirect_on_completion = "never";
+      }
     } else {
       sessionParams.success_url = body.successUrl;
       sessionParams.cancel_url = body.cancelUrl;

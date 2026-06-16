@@ -318,6 +318,7 @@ describe("POST /api/checkout", () => {
       const params = mockStripe.checkout.sessions.create.mock.calls[0][0];
       expect(params.ui_mode).toBe("embedded");
       expect(params.return_url).toBe("https://peytspencer.com/return");
+      expect(params.redirect_on_completion).toBeUndefined();
       expect(params.success_url).toBeUndefined();
       expect(params.cancel_url).toBeUndefined();
     });
@@ -352,7 +353,7 @@ describe("POST /api/checkout", () => {
       );
     });
 
-    it("rejects embedded checkout without returnUrl", async () => {
+    it("completes inline (redirect_on_completion: never) when returnUrl is absent", async () => {
       const request = createRequest({
         uiMode: "embedded",
         mode: "payment",
@@ -362,9 +363,16 @@ describe("POST /api/checkout", () => {
       const response = await POST(request);
       const body = await response.json();
 
-      expect(response.status).toBe(400);
-      expect(body.error).toBe("returnUrl is required for embedded checkout");
-      expect(mockStripe.checkout.sessions.create).not.toHaveBeenCalled();
+      expect(response.status).toBe(200);
+      expect(body.clientSecret).toBe("cs_test_emb_secret_abc");
+      expect(body.url).toBeNull();
+
+      const params = mockStripe.checkout.sessions.create.mock.calls[0][0];
+      expect(params.ui_mode).toBe("embedded");
+      expect(params.redirect_on_completion).toBe("never");
+      expect(params.return_url).toBeUndefined();
+      expect(params.success_url).toBeUndefined();
+      expect(params.cancel_url).toBeUndefined();
     });
 
     it("returns 500 when Stripe omits the client_secret", async () => {

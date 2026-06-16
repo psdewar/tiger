@@ -32,7 +32,10 @@ export interface CheckoutRequest {
   expiresInMinutes?: number;
   /** "hosted" (default) redirects to Stripe; "embedded" keeps the buyer on your page. */
   uiMode?: "hosted" | "embedded";
-  /** Required when uiMode is "embedded": where Stripe sends the buyer after completion. */
+  /**
+   * Optional for embedded checkout. With it, Stripe redirects here on completion;
+   * without it, embedded completes inline and you handle it via onComplete.
+   */
   returnUrl?: string;
 }
 
