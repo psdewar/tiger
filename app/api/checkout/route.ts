@@ -66,8 +66,15 @@ export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as CreateCheckoutRequest;
 
+    const uiMode = body.uiMode || "hosted";
+
     // Validate required fields
-    if (!body.successUrl || !body.cancelUrl) {
+    if (uiMode === "embedded") {
+      // Embedded checkout uses return_url instead of success/cancel URLs.
+      if (!body.returnUrl) {
+        return bad("returnUrl is required for embedded checkout");
+      }
+    } else if (!body.successUrl || !body.cancelUrl) {
       return bad("successUrl and cancelUrl are required");
     }
     if (!body.mode) {
@@ -98,11 +105,18 @@ export async function POST(request: NextRequest) {
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
       mode: body.mode,
       line_items: lineItems,
-      success_url: body.successUrl,
-      cancel_url: body.cancelUrl,
       payment_method_types: ["card"],
       expires_at: Math.floor(Date.now() / 1000) + (body.expiresInMinutes || 30) * 60,
     };
+
+    if (uiMode === "embedded") {
+      // Stripe rejects success_url/cancel_url alongside embedded; use return_url instead.
+      sessionParams.ui_mode = "embedded";
+      sessionParams.return_url = body.returnUrl;
+    } else {
+      sessionParams.success_url = body.successUrl;
+      sessionParams.cancel_url = body.cancelUrl;
+    }
 
     // Metadata
     if (body.metadata) {
@@ -139,6 +153,17 @@ export async function POST(request: NextRequest) {
 
     const stripe = getStripe(account);
     const session = await stripe.checkout.sessions.create(sessionParams);
+
+    if (uiMode === "embedded") {
+      if (!session.client_secret) {
+        return bad("Failed to generate checkout client secret", 500);
+      }
+      return NextResponse.json<CreateCheckoutResponse>({
+        sessionId: session.id,
+        clientSecret: session.client_secret,
+        url: null,
+      });
+    }
 
     if (!session.url) {
       return bad("Failed to generate checkout URL", 500);

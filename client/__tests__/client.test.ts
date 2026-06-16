@@ -25,7 +25,7 @@ describe("TigerClient", () => {
       });
 
       expect(mockFetch).toHaveBeenCalledWith(
-        "https://tiger.vercel.app/api/checkout",
+        "https://tiger-three.vercel.app/api/checkout",
         expect.any(Object)
       );
     });
@@ -195,7 +195,7 @@ describe("TigerClient", () => {
       const session = await client.getSession("cs_test_123");
 
       expect(mockFetch).toHaveBeenCalledWith(
-        "https://tiger.vercel.app/api/session/cs_test_123",
+        "https://tiger-three.vercel.app/api/session/cs_test_123",
         expect.objectContaining({
           headers: {
             "Content-Type": "application/json",

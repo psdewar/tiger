@@ -34,10 +34,17 @@ export interface CheckoutRequest {
     };
     collectPhone?: boolean;
     expiresInMinutes?: number;
+    /** "hosted" (default) redirects to Stripe; "embedded" keeps the buyer on your page. */
+    uiMode?: "hosted" | "embedded";
+    /** Required when uiMode is "embedded": where Stripe sends the buyer after completion. */
+    returnUrl?: string;
 }
 export interface CheckoutResponse {
     sessionId: string;
-    url: string;
+    /** Hosted redirect URL. Null for embedded checkout. */
+    url: string | null;
+    /** Present only for embedded checkout; pass to Stripe's EmbeddedCheckout on the client. */
+    clientSecret?: string;
 }
 export interface SessionResponse {
     id: string;

@@ -272,4 +272,163 @@ describe("POST /api/checkout", () => {
       expect(body.error).toBe("Failed to generate checkout URL");
     });
   });
+
+  describe("embedded checkout", () => {
+    const embeddedSession = {
+      id: "cs_test_emb",
+      url: null,
+      client_secret: "cs_test_emb_secret_abc",
+    };
+
+    beforeEach(() => {
+      mockStripe.checkout.sessions.create.mockResolvedValue(embeddedSession);
+    });
+
+    it("returns clientSecret and url:null for embedded sessions", async () => {
+      const request = createRequest({
+        uiMode: "embedded",
+        returnUrl: "https://peytspencer.com/return?session_id={CHECKOUT_SESSION_ID}",
+        mode: "payment",
+        lineItems: [{ name: "Test Product", amountCents: 1999 }],
+      });
+
+      const response = await POST(request);
+      const body = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(body.sessionId).toBe("cs_test_emb");
+      expect(body.clientSecret).toBe("cs_test_emb_secret_abc");
+      expect(body.url).toBeNull();
+    });
+
+    it("sets ui_mode embedded + return_url and omits success/cancel urls", async () => {
+      const request = createRequest({
+        uiMode: "embedded",
+        returnUrl: "https://peytspencer.com/return",
+        // success/cancel are ignored for embedded even when a caller sends them
+        successUrl: "https://peytspencer.com/success",
+        cancelUrl: "https://peytspencer.com/cancel",
+        mode: "payment",
+        lineItems: [{ name: "Test Product", amountCents: 1999 }],
+      });
+
+      const response = await POST(request);
+      expect(response.status).toBe(200);
+
+      const params = mockStripe.checkout.sessions.create.mock.calls[0][0];
+      expect(params.ui_mode).toBe("embedded");
+      expect(params.return_url).toBe("https://peytspencer.com/return");
+      expect(params.success_url).toBeUndefined();
+      expect(params.cancel_url).toBeUndefined();
+    });
+
+    it("preserves shared params (line_items, metadata, phone, email) in embedded mode", async () => {
+      const request = createRequest({
+        uiMode: "embedded",
+        returnUrl: "https://peytspencer.com/return",
+        mode: "payment",
+        lineItems: [{ name: "Test Product", amountCents: 1999, quantity: 2 }],
+        customerEmail: "buyer@example.com",
+        collectPhone: true,
+        metadata: { orderId: "42" },
+      });
+
+      const response = await POST(request);
+      expect(response.status).toBe(200);
+
+      expect(mockStripe.checkout.sessions.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          mode: "payment",
+          customer_email: "buyer@example.com",
+          phone_number_collection: { enabled: true },
+          metadata: expect.objectContaining({ orderId: "42", sourceApp: "testapp" }),
+          line_items: [
+            expect.objectContaining({
+              price_data: expect.objectContaining({ unit_amount: 1999 }),
+              quantity: 2,
+            }),
+          ],
+        })
+      );
+    });
+
+    it("rejects embedded checkout without returnUrl", async () => {
+      const request = createRequest({
+        uiMode: "embedded",
+        mode: "payment",
+        lineItems: [{ name: "Test", amountCents: 1000 }],
+      });
+
+      const response = await POST(request);
+      const body = await response.json();
+
+      expect(response.status).toBe(400);
+      expect(body.error).toBe("returnUrl is required for embedded checkout");
+      expect(mockStripe.checkout.sessions.create).not.toHaveBeenCalled();
+    });
+
+    it("returns 500 when Stripe omits the client_secret", async () => {
+      mockStripe.checkout.sessions.create.mockResolvedValue({
+        id: "cs_test_emb",
+        url: null,
+        client_secret: null,
+      });
+
+      const request = createRequest({
+        uiMode: "embedded",
+        returnUrl: "https://peytspencer.com/return",
+        mode: "payment",
+        lineItems: [{ name: "Test", amountCents: 1000 }],
+      });
+
+      const response = await POST(request);
+      const body = await response.json();
+
+      expect(response.status).toBe(500);
+      expect(body.error).toBe("Failed to generate checkout client secret");
+    });
+  });
+
+  describe("hosted checkout (backward compatibility)", () => {
+    it("defaults to hosted when uiMode is omitted: sets success/cancel, no ui_mode, returns url", async () => {
+      const request = createRequest({
+        successUrl: "https://example.com/success",
+        cancelUrl: "https://example.com/cancel",
+        mode: "payment",
+        lineItems: [{ name: "Test", amountCents: 1000 }],
+      });
+
+      const response = await POST(request);
+      const body = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(body.url).toBe("https://checkout.stripe.com/test");
+      expect(body.clientSecret).toBeUndefined();
+
+      const params = mockStripe.checkout.sessions.create.mock.calls[0][0];
+      expect(params.success_url).toBe("https://example.com/success");
+      expect(params.cancel_url).toBe("https://example.com/cancel");
+      expect(params.ui_mode).toBeUndefined();
+      expect(params.return_url).toBeUndefined();
+    });
+
+    it("treats explicit uiMode 'hosted' the same as omitted", async () => {
+      const request = createRequest({
+        uiMode: "hosted",
+        successUrl: "https://example.com/success",
+        cancelUrl: "https://example.com/cancel",
+        mode: "payment",
+        lineItems: [{ name: "Test", amountCents: 1000 }],
+      });
+
+      const response = await POST(request);
+      const body = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(body.url).toBe("https://checkout.stripe.com/test");
+
+      const params = mockStripe.checkout.sessions.create.mock.calls[0][0];
+      expect(params.ui_mode).toBeUndefined();
+    });
+  });
 });
